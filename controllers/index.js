@@ -1,52 +1,27 @@
 const fs = require('fs');
 
-module.exports.getAllProducts = (req, res) => {
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(JSON.stringify(getProductsModel()));
+module.exports.getAllProducts = () => JSON.stringify(getProductsModel());
+
+module.exports.getSingleProduct = (id) => getProductsModel().find(item => item.id == id) || null;
+
+module.exports.getAllProductReviews = (id) => {
+    const product = getProductsModel().find(item => item.id == id) || {reviews: null};
+
+    return JSON.stringify(product.reviews);
 }
 
-module.exports.getSingleProduct = (req, res) => {
-    const id = req.params.id;
-    const product = getProductsModel().find(item => item.id == id);
+module.exports.addProduct = (product, callback) => {
+    const products = getProductsModel();
+    products.push(JSON.parse(product));
 
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(JSON.stringify(product));
-}
+    fs.writeFile('models/products.json', JSON.stringify(products, null, 2), (err) => {
+        if (err) console.log(err);
 
-module.exports.getAllProductReviews = (req, res) => {
-    const id = req.params.id;
-    const product = getProductsModel().find(item => item.id == id);
-
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(JSON.stringify(product.reviews));
-}
-
-module.exports.createProduct = (req, res) => {
-    let body = [];
-
-    req.on('data', (chunk) => {
-        body.push(chunk);
+        callback();
     });
-
-    req.on('end', () => {
-        body = Buffer.concat(body).toString();
-
-        const products = getProductsModel();
-        products.push(JSON.parse(body));
-
-        fs.writeFile('models/products.json', JSON.stringify(products, null, 2), (err) => {
-            if (err) console.log(err);
-            
-            res.writeHead(200, {'Content-type': 'application/json'});
-            res.end(body);
-        });
-    })
 }
 
-module.exports.getAllUsers = (req, res) => {
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(JSON.stringify(getUsersModel()));
-}
+module.exports.getAllUsers = () => JSON.stringify(getUsersModel());
 
 function getProductsModel() {
     return JSON.parse(fs.readFileSync('models/products.json'));
