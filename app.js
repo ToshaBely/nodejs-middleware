@@ -31,11 +31,11 @@ passport.use(new LocalStrategy({ usernameField: 'login', passwordField: 'passwor
     })
 );
 
-passport.use(new FacebookStrategy(
-    function(accessToken, refreshToken, profile, done) {
-        done(null, {id: 'test'});
-    })
-);
+// passport.use(new FacebookStrategy(
+//     function(accessToken, refreshToken, profile, done) {
+//         done(null, {id: 'test'});
+//     })
+// );
 
 passport.serializeUser(function(user, cb) {
     cb(null, user.id);
@@ -54,7 +54,7 @@ app.post('/auth', passport.authenticate('local'), (req, res) => {
     res.end(JSON.stringify({ success: true, token }));
 });
 
-app.get('/auth/facebook', passport.authenticate('facebook'));
+// app.get('/auth/facebook', passport.authenticate('facebook'));
 
 app.use('/api', middlewares.checkToken, routes);
 
