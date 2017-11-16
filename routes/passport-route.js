@@ -5,16 +5,18 @@ const TwitterStrategy = require('passport-twitter').Strategy;
 const router = require('express').Router();
 const fs = require('fs');
 
+const controller = require('../controllers');
+
 passport.use(new LocalStrategy({ usernameField: 'login', passwordField: 'password', session: false, passReqToCallback: true }, 
     (req, login, password, done) => {
-
-        const user = JSON.parse(fs.readFileSync('mock-creds.json')).find(item => item.login === login);
-        
-        if (!user || user.password !== password) {
-            return done(null, false, { message: 'Wrong credentionals' });
-        } else {
-            return done(null, user);
-        }
+        controller.getUserByLogin(login)
+            .then( user => {
+                if (!user || user.password !== password) return done(null, false, { message: 'Wrong credentionals' });
+                return done(null, user);
+            })
+            .catch( err => {
+                return done(err);
+            });
     })
 );
 
@@ -24,14 +26,18 @@ passport.use(new TwitterStrategy({
     callbackURL: "http://localhost:3000/auth/twitter/callback"
   },
   function(token, tokenSecret, profile, done) {
-    const users = getUsers();
-    let user = users.find(item => item.id === 'twitter-' + profile.id);
+    controller.getUserByAuthStrategy('twitter', profile.id)
+    .then( user => {
+        if(user) return done(null, user);
 
-    if (!user) {
-      user = saveUserFromTwitter(profile);
-    }
-
-    return done(null, user);
+        controller.createUserByAuthStrategy('twitter', profile.id, profile.displayName)
+            .then( user => {
+                return done(null, user);
+            });
+    })
+    .catch( err => {
+        return done(err);
+    });
   }
 ));
 
@@ -41,14 +47,18 @@ passport.use(new GoogleStrategy({
     callbackURL: "http://localhost:3000/auth/google/callback"
   },
   function(token, tokenSecret, profile, done) {
-      const users = getUsers();
-      let user = users.find(item => item.id === 'google-' + profile.id);
+      controller.getUserByAuthStrategy('google', profile.id)
+        .then( user => {
+            if(user) return done(null, user);
 
-      if (!user) {
-        user = saveUserFromGoogle(profile);
-      }
-
-      return done(null, user);
+            controller.createUserByAuthStrategy('google', profile.id, profile.name.givenName + ' ' + profile.name.familyName)
+                .then( user => {
+                    return done(null, user);
+                });
+        })
+        .catch( err => {
+            return done(err);
+        });
   }
 ));
 
@@ -57,12 +67,18 @@ passport.serializeUser(function(user, callback) {
   });
   
 passport.deserializeUser(function(id, callback) {
-    const user = getUsers().find(item => item.id === id);
-    callback(null, user);
+    controller.getUserById(id)
+        .then( user => {
+            callback(null, user);
+        });
 });
 
-router.post('/', passport.authenticate('local'), (req, res) => {
-    res.json(req.user);
+router.post('/', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if( !user ) return res.status(401).end(info.message);
+        res.json(user);
+    })(req, res, next);
 });
 
 router.get('/twitter', passport.authenticate('twitter'));
@@ -77,35 +93,3 @@ router.get('/google/callback', passport.authenticate('google'), (req, res) => {
 });
 
 module.exports = router;
-
-function getUsers() {
-    return JSON.parse(fs.readFileSync('./mock-creds.json'));
-}
-
-function saveUserFromTwitter(profile) {
-    console.log(profile);
-
-    const users = getUsers();
-    const user = {
-        id: 'twitter-' + profile.id,
-        username: profile.displayName
-    };
-
-    users.push(user);
-    fs.writeFileSync('./mock-creds.json', JSON.stringify(users, null, 4));
-
-    return user;
-}
-
-function saveUserFromGoogle(profile) {
-    const users = getUsers();
-    const user = {
-        id: 'google-' + profile.id,
-        username: profile.name.givenName + ' ' + profile.name.familyName
-    };
-
-    users.push(user);
-    fs.writeFileSync('./mock-creds.json', JSON.stringify(users, null, 4));
-
-    return user;
-}

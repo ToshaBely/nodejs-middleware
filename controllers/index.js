@@ -1,32 +1,32 @@
 const fs = require('fs');
+const Sequelize = require('sequelize');
 
-module.exports.getAllProducts = () => JSON.stringify(getProductsModel());
+const sequelize = new Sequelize('testdb', 'postgres', 'password', {
+    host: 'localhost',
+    dialect: 'postgres'
+});
 
-module.exports.getSingleProduct = (id) => getProductsModel().find(item => item.id == id) || null;
+const User = require('../models/user')(sequelize, Sequelize);
+const Product = require('../models/product')(sequelize, Sequelize);
+const Review = require('../models/review')(sequelize, Sequelize);
 
-module.exports.getAllProductReviews = (id) => {
-    const product = getProductsModel().find(item => item.id == id) || {reviews: null};
+Review.belongsTo(Product);
+Product.hasMany(Review);
 
-    return JSON.stringify(product.reviews);
-}
+module.exports.getAllProducts = () => Product.findAll({ include: [ Review ] });
 
-module.exports.addProduct = (product, callback) => {
-    const products = getProductsModel();
-    products.push(JSON.parse(product));
+module.exports.getSingleProduct = (id) => Product.findById(id, { include: [ Review ] });
 
-    fs.writeFile('models/products.json', JSON.stringify(products, null, 2), (err) => {
-        if (err) console.log(err);
+module.exports.getAllProductReviews = (id) => Review.findAll({ where: { productId: id } });
 
-        callback();
-    });
-}
+module.exports.addProduct = (product) => Product.create(product, { include: [Review] });
 
-module.exports.getAllUsers = () => JSON.stringify(getUsersModel());
+module.exports.getAllUsers = () => User.findAll({ raw: true });
 
-function getProductsModel() {
-    return JSON.parse(fs.readFileSync('models/products.json'));
-}
+module.exports.getUserById = (id) => User.findById(id);
 
-function getUsersModel() {
-    return JSON.parse(fs.readFileSync('models/users.json'));
-}
+module.exports.getUserByLogin = (login) => User.findOne({ where: {login} });
+
+module.exports.getUserByAuthStrategy = (authStrategy, authId) => User.findOne({ where: { authStrategy, authId} });
+
+module.exports.createUserByAuthStrategy = (authStrategy, authId, username) => User.create({authStrategy, authId, username});

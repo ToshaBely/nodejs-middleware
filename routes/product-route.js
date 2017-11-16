@@ -2,44 +2,62 @@ const router = require('express').Router();
 const controllers = require('../controllers');
 
 router.get('/products', (req, res) => {
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(controllers.getAllProducts());
+    controllers.getAllProducts()
+        .then( products => {
+            res.writeHead(200, {'Content-type': 'application/json'});
+            res.end(JSON.stringify(products));
+        })
+        .catch( err => {
+            res.status(500).end();
+        });
 });
 
 router.get('/products/:id', (req, res) => {
     const id = req.params.id;
-    
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(JSON.stringify(controllers.getSingleProduct(id)));
+
+    controllers.getSingleProduct(id)
+        .then( product => {
+            res.writeHead(200, {'Content-type': 'application/json'});
+            res.end(JSON.stringify(product));
+        })
+        .catch( err => {
+            res.status(500).end();
+        });
 });
 
 router.get('/products/:id/reviews', (req, res) => {
     const id = req.params.id;
 
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(controllers.getAllProductReviews(id));
+    controllers.getAllProductReviews(id)
+        .then( reviews => {
+            res.writeHead(200, {'Content-type': 'application/json'});
+            res.end(JSON.stringify(reviews));
+        })
+        .catch( err => {
+            res.status(500).end();
+        });
 });
 
 router.post('/products', (req, res) => {
-    let body = [];
-    
-    req.on('data', (chunk) => {
-        body.push(chunk);
-    });
-    
-    req.on('end', () => {
-        body = Buffer.concat(body).toString();
-
-        controllers.addProduct(body, () => {
+    controllers.addProduct(req.body)
+        .then( product => {
             res.writeHead(200, {'Content-type': 'application/json'});
-            res.end(body);
+            res.end(JSON.stringify(product));
+        })
+        .catch( err => {
+            res.status(500).end();
         });
-    });
 });
 
 router.get('/users', (req, res) => {
-    res.writeHead(200, {'Content-type': 'application/json'});
-    res.end(controllers.getAllUsers());
+    controllers.getAllUsers()
+        .then( users => {
+            res.writeHead(200, {'Content-type': 'application/json'});
+            res.end(JSON.stringify(users));
+        })
+        .catch( err => {
+            res.status(500).end();
+        });
 });
 
 module.exports = router;
