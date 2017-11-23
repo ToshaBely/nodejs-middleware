@@ -5,7 +5,7 @@ const TwitterStrategy = require('passport-twitter').Strategy;
 const router = require('express').Router();
 const fs = require('fs');
 
-const controller = require('../controllers');
+const controller = require('../controllers').mongoController;
 
 passport.use(new LocalStrategy({ usernameField: 'login', passwordField: 'password', session: false, passReqToCallback: true }, 
     (req, login, password, done) => {
@@ -27,17 +27,17 @@ passport.use(new TwitterStrategy({
   },
   function(token, tokenSecret, profile, done) {
     controller.getUserByAuthStrategy('twitter', profile.id)
-    .then( user => {
-        if(user) return done(null, user);
+        .then( user => {
+            if(user) return done(null, user);
 
-        controller.createUserByAuthStrategy('twitter', profile.id, profile.displayName)
-            .then( user => {
-                return done(null, user);
-            });
-    })
-    .catch( err => {
-        return done(err);
-    });
+            controller.createUserByAuthStrategy('twitter', profile.id, profile.displayName)
+                .then( user => {
+                    return done(null, user);
+                });
+        })
+        .catch( err => {
+            return done(err);
+        });
   }
 ));
 
@@ -63,7 +63,7 @@ passport.use(new GoogleStrategy({
 ));
 
 passport.serializeUser(function(user, callback) {
-    callback(null, user.id);
+    callback(null, user._id);
   });
   
 passport.deserializeUser(function(id, callback) {

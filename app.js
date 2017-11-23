@@ -21,7 +21,6 @@ app.use('/auth', routes.passport);
 app.use('/api', checkAuth, routes.product);
 
 function checkAuth(req, res, next) {
-    console.log('isAuth: ', req.isAuthenticated());
     if (req.isAuthenticated()) return next();
     res.status(403).end();
 }
